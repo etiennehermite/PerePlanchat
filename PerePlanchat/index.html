@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le jeu du Père Planchat</title>
+    <!-- Chargement de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Définition de la police Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #e0f2fe; /* Bleu très clair */
+        }
+        /* Style des cases du jeu */
+        .game-spot {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #a78bfa; /* Violet clair */
+            border-radius: 12px; /* Coins arrondis */
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            font-size: 2.5rem; /* Taille de l'emoji */
+            user-select: none; /* Empêche la sélection de texte */
+            overflow: hidden; /* Cache le contenu qui dépasse */
+        }
+        .game-spot:hover {
+            transform: translateY(-3px); /* Effet de léger soulèvement au survol */
+            background-color: #8b5cf6; /* Violet légèrement plus foncé */
+        }
+        .game-spot.found {
+            background-color: #4ade80; /* Vert pour la case trouvée */
+            pointer-events: none; /* Désactive les clics après avoir trouver */
+        }
+        .game-spot.clicked {
+            background-color: #fca5a5; /* Rouge clair pour les cases cliquées non trouvées */
+        }
+        .game-spot.game-over {
+            background-color: #ef4444; /* Rouge pour la défaite */
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen bg-blue-100 p-4">
+
+    <!-- Conteneur principal du jeu -->
+    <div class="bg-white p-8 rounded-2xl shadow-xl max-w-lg w-full text-center">
+        <h1 class="text-4xl font-bold text-gray-800 mb-6">Le jeu du Père Planchat</h1>
+
+        <!-- Zone de message du jeu -->
+        <p id="message" class="text-lg text-gray-700 mb-4">Retrouve la croix et la bannière en un minimum de coups, sans tomber sur des communards</p>
+        <p id="moves-counter" class="text-xl font-semibold text-gray-700 mb-6">Coups: 0</p>
+
+        <!-- Grille de jeu -->
+        <div id="game-grid" class="grid grid-cols-3 md:grid-cols-3 gap-4 justify-items-center mb-6">
+            <!-- Les cases du jeu seront générées ici par JavaScript -->
+        </div>
+
+        <!-- Bouton de réinitialisation -->
+        <button id="reset-button" class="bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-xl hover:from-purple-600 hover:to-indigo-700 transition duration-300 ease-in-out shadow-lg">
+            Recommencer
+        </button>
+    </div>
+
+    <script>
+        // Variables globales
+        const gameGrid = document.getElementById('game-grid');
+        const messageDisplay = document.getElementById('message');
+        const movesCounter = document.getElementById('moves-counter');
+        const resetButton = document.getElementById('reset-button');
+        const numSpots = 9; // Nombre de cases dans la grille
+        let crossLocation = -1; // Emplacement de la croix
+        let bannerLocation = -1; // Emplacement de la bannière
+        let communardLocation = -1; // Emplacement du communard
+        let foundCross = false; // Indicateur si la croix est trouvée
+        let foundBanner = false; // Indicateur si la bannière est trouvée
+        let gameActive = true; // État du jeu
+        let moves = 0; // Nombre de coups
+
+        // Fonction pour obtenir trois emplacements aléatoires distincts
+        function getRandomDistinctLocations(max) {
+            let locs = [];
+            while (locs.length < 3) {
+                let r = Math.floor(Math.random() * max);
+                if (locs.indexOf(r) === -1) {
+                    locs.push(r);
+                }
+            }
+            return locs;
+        }
+
+        // Fonction pour initialiser le jeu
+        function initializeGame() {
+            // Efface le contenu précédent de la grille
+            gameGrid.innerHTML = '';
+            // Réinitialise les messages et les compteurs
+            messageDisplay.textContent = 'Retrouve la croix et la bannière en un minimum de coups, sans tomber sur des communards';
+            moves = 0;
+            movesCounter.textContent = `Coups: ${moves}`;
+            // Réinitialise les indicateurs
+            foundCross = false;
+            foundBanner = false;
+            // Active le jeu
+            gameActive = true;
+
+            // Détermine trois emplacements aléatoires distincts pour la croix, la bannière et le communard
+            const [loc1, loc2, loc3] = getRandomDistinctLocations(numSpots);
+            crossLocation = loc1;
+            bannerLocation = loc2;
+            communardLocation = loc3;
+
+            // console.log("La croix est à l'emplacement:", crossLocation); // Pour le débogage
+            // console.log("La bannière est à l'emplacement:", bannerLocation); // Pour le débogage
+            // console.log("Le communard est à l'emplacement:", communardLocation); // Pour le débogage
+
+            // Crée les cases du jeu
+            for (let i = 0; i < numSpots; i++) {
+                const spot = document.createElement('div');
+                spot.classList.add('game-spot', 'flex-shrink-0');
+                spot.dataset.index = i;
+
+                // Ajoute un écouteur d'événements pour le clic
+                spot.addEventListener('click', handleSpotClick);
+                gameGrid.appendChild(spot);
+            }
+        }
+
+        // Fonction pour gérer le clic sur une case
+        function handleSpotClick(event) {
+            // Vérifie si le jeu est actif
+            if (!gameActive) {
+                return;
+            }
+
+            const clickedSpot = event.target;
+            const clickedIndex = parseInt(clickedSpot.dataset.index);
+
+            // Si la case n'a pas déjà été cliquée ou trouvée
+            if (!clickedSpot.classList.contains('clicked') && !clickedSpot.classList.contains('found') && !clickedSpot.classList.contains('game-over')) {
+                moves++; // Incrémente le compteur de coups
+                movesCounter.textContent = `Coups: ${moves}`; // Met à jour l'affichage des coups
+
+                // Vérifie si c'est le communard (condition de défaite)
+                if (clickedIndex === communardLocation) {
+                    clickedSpot.textContent = '☭'; // Affiche la faucille et le marteau
+                    clickedSpot.classList.add('game-over');
+                    messageDisplay.textContent = 'Oh non ! Vous avez trouvé le communard ! Partie terminée. 💀';
+                    gameActive = false; // Désactive le jeu
+                    // Révèle tous les éléments pour montrer où ils étaient
+                    revealAllElements();
+                }
+                // Vérifie si c'est la croix
+                else if (clickedIndex === crossLocation && !foundCross) {
+                    clickedSpot.textContent = '✝️'; // Affiche l'emoji croix
+                    clickedSpot.classList.add('found');
+                    foundCross = true;
+                }
+                // Vérifie si c'est la bannière
+                else if (clickedIndex === bannerLocation && !foundBanner) {
+                    clickedSpot.textContent = '🏳️'; // Affiche l'emoji bannière
+                    clickedSpot.classList.add('found');
+                    foundBanner = true;
+                }
+                // Si la case ne contient ni la croix, ni la bannière, ni le communard
+                else {
+                    clickedSpot.textContent = '❌'; // Affiche une croix
+                    clickedSpot.classList.add('clicked');
+                }
+
+                // Met à jour le message et vérifie la condition de victoire
+                if (gameActive) { // Seulement si le jeu n'est pas déjà terminé par le communard
+                    if (foundCross && foundBanner) {
+                        messageDisplay.textContent = `Félicitations ! Vous avez trouvé la croix et la bannière en ${moves} coups ! 🎉`;
+                        gameActive = false; // Désactive le jeu
+                        revealAllElements(); // Révèle les éléments restants (si le communard n'a pas été cliqué)
+                    } else if (foundCross || foundBanner) {
+                        messageDisplay.textContent = 'Bien joué ! Trouvez l\'autre élément !';
+                    } else {
+                        messageDisplay.textContent = 'Pas ici... Essayez encore !';
+                    }
+                }
+            }
+        }
+
+        // Fonction pour révéler tous les éléments à la fin de la partie (victoire ou défaite)
+        function revealAllElements() {
+            Array.from(gameGrid.children).forEach(spot => {
+                const index = parseInt(spot.dataset.index);
+                spot.removeEventListener('click', handleSpotClick); // Désactive les clics
+                if (index === crossLocation && !spot.classList.contains('found')) {
+                    spot.textContent = '✝️';
+                    spot.classList.add('found');
+                } else if (index === bannerLocation && !spot.classList.contains('found')) {
+                    spot.textContent = '🏳️';
+                    spot.classList.add('found');
+                } else if (index === communardLocation && !spot.classList.contains('game-over')) {
+                    spot.textContent = '☭';
+                    spot.classList.add('game-over');
+                }
+                // Si la case a été cliquée mais ne contenait rien d'important, elle reste en "X"
+            });
+        }
+
+        // Ajoute un écouteur d'événements pour le bouton de réinitialisation
+        resetButton.addEventListener('click', initializeGame);
+
+        // Initialise le jeu au chargement de la page
+        window.onload = initializeGame;
+    </script>
+</body>
+</html>
