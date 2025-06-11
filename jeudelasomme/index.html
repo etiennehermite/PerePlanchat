@@ -1,1 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le jeu des 25</title>
+    <!-- Chargement de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Définition de la police Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #e0f2fe; /* Bleu très clair */
+        }
+        .numbers-display {
+            font-size: 4rem; /* Grande taille pour les chiffres */
+            font-weight: bold;
+            color: #334155; /* Gris foncé */
+            min-height: 80px; /* Assure une hauteur stable */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f9ff; /* Bleu très très clair */
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen bg-blue-100 p-4">
+
+    <!-- Conteneur principal du jeu -->
+    <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
+        <h1 class="text-4xl font-bold text-gray-800 mb-6">Le jeu des 2️⃣5️⃣</h1>
+
+        <!-- Instructions du jeu -->
+        <p id="game7-message" class="text-lg text-gray-700 mb-4">
+            Cliquez sur STOP dès que la somme des 5 chiffres affichés est égale à 25. Cela arrivera une fois en 20 coups.
+        </p>
+
+        <!-- Affichage des chiffres -->
+        <div id="numbers-display" class="numbers-display">
+            0 0 0 0 0
+        </div>
+
+        <!-- Compteur de combinaison -->
+        <p id="round-counter" class="text-xl font-semibold text-gray-700 mb-6">
+            Combinaison: 0/20
+        </p>
+
+        <!-- Boutons d'action -->
+        <div class="flex justify-center gap-4">
+            <button id="stop-button" class="bg-gradient-to-r from-red-500 to-pink-600 text-white font-bold py-3 px-6 rounded-xl hover:from-red-600 hover:to-pink-700 transition duration-300 ease-in-out shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                STOP
+            </button>
+            <button id="restart7-button" class="bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-xl hover:from-purple-600 hover:to-indigo-700 transition duration-300 ease-in-out shadow-lg">
+                Recommencer
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        const numbersDisplay = document.getElementById('numbers-display');
+        const stopButton = document.getElementById('stop-button');
+        const game7Message = document.getElementById('game7-message');
+        const roundCounter = document.getElementById('round-counter');
+        const restart7Button = document.getElementById('restart7-button');
+
+        const totalRounds = 20;
+        const numberDisplayDuration = 4000; // 4 secondes (mis à jour)
+        const targetSum = 25; // La nouvelle somme cible
+
+        let currentNumbers = [];
+        let currentSum = 0;
+        let currentRound = 0;
+        let game7Active = false;
+        let numberInterval;
+        let targetRoundForSum; // La manche où la somme doit être la cible
+        let clickedOnCorrectSum = false;
+
+        // Fonction pour générer 5 chiffres aléatoires dont la somme n'est PAS la cible
+        function generateNonTargetSumNumbers() {
+            let numbers;
+            let sum;
+            do {
+                numbers = [];
+                sum = 0;
+                for (let i = 0; i < 5; i++) {
+                    const num = Math.floor(Math.random() * 10) + 1; // Chiffres entre 1 et 10
+                    numbers.push(num);
+                    sum += num;
+                }
+            } while (sum === targetSum); // Re-générer si la somme est la cible
+            currentNumbers = numbers;
+            currentSum = sum;
+        }
+
+        // Fonction pour générer 5 chiffres dont la somme EST la cible (25)
+        function generateTargetSumNumbers() {
+            // Une combinaison simple qui somme à 25 avec des chiffres entre 1 et 10
+            let numbers = [5, 5, 5, 5, 5]; // Somme = 25
+            // Mélange le tableau pour un aspect plus aléatoire
+            for (let i = numbers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
+            }
+            currentNumbers = numbers;
+            currentSum = targetSum;
+        }
+
+        // Fonction pour afficher les chiffres
+        function displayNumbers() {
+            numbersDisplay.textContent = currentNumbers.join(' ');
+            roundCounter.textContent = `Combinaison: ${currentRound}/${totalRounds}`;
+            // Pour le débogage: console.log(`Manche: ${currentRound}, Chiffres: ${currentNumbers}, Somme: ${currentSum}`);
+        }
+
+        // Fonction pour démarrer le jeu
+        function startSevenGame() {
+            game7Active = true;
+            currentRound = 0;
+            clickedOnCorrectSum = false;
+            game7Message.textContent = `Cliquez sur STOP quand la somme est ${targetSum} !`;
+            stopButton.disabled = false;
+            stopButton.classList.remove('bg-gray-400', 'cursor-not-allowed', 'bg-red-500', 'bg-green-500');
+            stopButton.classList.add('from-red-500', 'to-pink-600', 'hover:from-red-600', 'hover:to-pink-700');
+            restart7Button.textContent = 'Recommencer'; // Change le texte du bouton
+
+            // Déterminer dans quelle manche la somme cible apparaîtra
+            targetRoundForSum = Math.floor(Math.random() * totalRounds) + 1;
+            // Pour le débogage: console.log(`La somme de ${targetSum} apparaîtra à la manche:`, targetRoundForSum);
+
+            // Première affichage et début du cycle
+            updateNumbersAndCheckEnd();
+
+            numberInterval = setInterval(() => {
+                if (!game7Active) {
+                    clearInterval(numberInterval);
+                    return;
+                }
+                updateNumbersAndCheckEnd();
+            }, numberDisplayDuration);
+        }
+
+        function updateNumbersAndCheckEnd() {
+            currentRound++;
+            if (currentRound > totalRounds) {
+                // Le jeu se termine automatiquement après 20 manches si le joueur n'a pas gagné
+                endSevenGame(false, `Les ${totalRounds} combinaisons sont passées. Partie terminée. 😔`);
+                return;
+            }
+
+            if (currentRound === targetRoundForSum) {
+                generateTargetSumNumbers();
+            } else {
+                generateNonTargetSumNumbers();
+            }
+            displayNumbers();
+        }
+
+        // Fonction pour gérer le clic sur le bouton STOP
+        function handleStopClick() {
+            if (!game7Active) return;
+
+            if (currentSum === targetSum && currentRound === targetRoundForSum) {
+                clickedOnCorrectSum = true;
+                endSevenGame(true, `Bravo ! La somme était bien ${targetSum} en ${currentRound} coups ! 🎉`);
+            } else {
+                endSevenGame(false, `Perdu ! La somme n'était pas ${targetSum} (${currentSum}). Partie terminée. 💀`);
+            }
+        }
+
+        // Fonction pour terminer le jeu
+        function endSevenGame(won, message) {
+            game7Active = false;
+            clearInterval(numberInterval);
+            game7Message.textContent = message;
+            stopButton.disabled = true;
+            stopButton.classList.remove('from-red-500', 'to-pink-600', 'hover:from-red-600', 'hover:to-pink-700');
+            stopButton.classList.add(won ? 'bg-green-500' : 'bg-red-500', 'cursor-not-allowed');
+            restart7Button.textContent = 'Rejouer'; // Change le texte du bouton pour rejouer
+        }
+
+        // Écouteurs d'événements
+        stopButton.addEventListener('click', handleStopClick);
+        restart7Button.addEventListener('click', startSevenGame); // Ce bouton sera utilisé pour "Commencer" et "Rejouer"
+
+        // Initialisation du jeu au chargement de la page
+        document.addEventListener('DOMContentLoaded', initializeSevenGame);
+
+        function initializeSevenGame() {
+            game7Active = false;
+            currentNumbers = [0, 0, 0, 0, 0];
+            currentSum = 0;
+            currentRound = 0;
+            numbersDisplay.textContent = '0 0 0 0 0';
+            roundCounter.textContent = `Combinaison: 0/${totalRounds}`;
+            game7Message.textContent = `Cliquez sur Commencer pour jouer !`;
+            stopButton.disabled = true;
+            stopButton.classList.remove('from-red-500', 'to-pink-600', 'hover:from-red-600', 'hover:to-pink-700', 'bg-green-500', 'bg-red-500');
+            stopButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+            restart7Button.textContent = 'Commencer'; // Texte initial du bouton
+            restart7Button.classList.remove('bg-green-500', 'bg-red-500'); // S'assurer que les couleurs de fin de partie sont enlevées
+            restart7Button.classList.add('from-purple-500', 'to-indigo-600', 'hover:from-purple-600', 'hover:to-indigo-700');
+            clearInterval(numberInterval); // S'assurer que tout intervalle précédent est stoppé
+        }
+    </script>
+</body>
+</html>
 
