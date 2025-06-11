@@ -1,1 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le pèlerin en retard</title>
+    <!-- Chargement de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Définition de la police Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #e0f2fe; /* Bleu très clair */
+        }
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e2e8f0; /* Gris clair */
+            border-radius: 9999px; /* Pleinement arrondi */
+            overflow: hidden;
+            height: 32px; /* Hauteur de la barre de progression */
+            margin-bottom: 8px; /* Marge en bas */
+            position: relative;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 9999px; /* Pleinement arrondi */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: width 0.1s linear; /* Transition plus douce */
+        }
+        .player-bar .progress-bar-fill {
+            background-color: #6366f1; /* Indigo */
+        }
+        .target-bar .progress-bar-fill {
+            background-color: #22c55e; /* Vert */
+        }
+        .entity-icon {
+            position: absolute;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem; /* Taille des icônes */
+            left: 0;
+            transform: translateX(-50%); /* Centrer l'icône sur le début de la barre */
+            transition: left 0.1s linear;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen bg-blue-100 p-4">
+
+    <!-- Conteneur principal du jeu -->
+    <div class="bg-white p-8 rounded-2xl shadow-xl max-w-2xl w-full text-center">
+        <h1 class="text-4xl font-bold text-gray-800 mb-6">Le pèlerin en retard 🚶</h1>
+
+        <!-- Instructions du jeu -->
+        <p id="message" class="text-lg text-gray-700 mb-4">
+            Essaie de rattraper la croix et la bannière du Père Planchat avant la prochaine pause, en courant ! Utilise les touches 'o' (jambe gauche) et 'p' (jambe droite) pour rattraper le chapitre.
+        </p>
+
+        <!-- Affichage du minuteur et des pas -->
+        <div class="flex justify-between items-center mb-6 text-xl font-semibold text-gray-700">
+            <span id="timer-display">Temps: 15.0s</span>
+            <span id="steps-display">Pas: 0/100</span>
+        </div>
+
+        <!-- Barres de progression -->
+        <div class="mb-8">
+            <label class="block text-left text-gray-700 font-medium mb-2">Votre pèlerin 🚶</label>
+            <div class="progress-bar-container player-bar">
+                <div id="player-progress-fill" class="progress-bar-fill">
+                    <span id="player-icon" class="entity-icon">🚶</span>
+                </div>
+            </div>
+
+            <label class="block text-left text-gray-700 font-medium mb-2 mt-4">Père Planchat ✝️🏳️</label>
+            <div class="progress-bar-container target-bar">
+                <div id="target-progress-fill" class="progress-bar-fill">
+                    <span id="target-icon" class="entity-icon">✝️🏳️</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bouton de réinitialisation -->
+        <button id="reset-button" class="bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-xl hover:from-purple-600 hover:to-indigo-700 transition duration-300 ease-in-out shadow-lg">
+            Commencer
+        </button>
+    </div>
+
+    <script>
+        // Variables globales
+        const timerDisplay = document.getElementById('timer-display');
+        const stepsDisplay = document.getElementById('steps-display');
+        const messageDisplay = document.getElementById('message');
+        const playerProgressFill = document.getElementById('player-progress-fill');
+        const targetProgressFill = document.getElementById('target-progress-fill');
+        const playerIcon = document.getElementById('player-icon');
+        const targetIcon = document.getElementById('target-icon');
+        const resetButton = document.getElementById('reset-button');
+
+        const totalSteps = 100; // Nombre total de pas à effectuer
+        const gameDuration = 15; // Durée du jeu en secondes
+        // La cible parcourt 80% des pas (80 pas) en gameDuration secondes
+        const targetSpeedFactor = 80 / gameDuration;
+
+        let stepsTaken = 0;
+        let timer = gameDuration;
+        let gameActive = false;
+        let lastKeyPressed = '';
+        let countdownInterval;
+        let targetProgress = 0; // Initialisation de la progression de la cible
+
+        // Fonction pour mettre à jour les barres de progression visuellement
+        function updateProgressBars() {
+            const playerPercentage = (stepsTaken / totalSteps) * 100;
+            const targetPercentage = (targetProgress / totalSteps) * 100;
+
+            playerProgressFill.style.width = `${Math.min(100, playerPercentage)}%`;
+            targetProgressFill.style.width = `${Math.min(100, targetPercentage)}%`;
+
+            // Positionnement des icônes pour qu'elles suivent la progression
+            playerIcon.style.left = `${Math.min(100, playerPercentage)}%`;
+            targetIcon.style.left = `${Math.min(100, targetPercentage)}%`;
+
+            stepsDisplay.textContent = `Pas: ${stepsTaken}/${totalSteps}`;
+        }
+
+        // Fonction pour gérer la fin du jeu
+        function endGame(won) {
+            gameActive = false;
+            clearInterval(countdownInterval);
+            document.removeEventListener('keydown', handleKeyPress);
+
+            if (won) {
+                messageDisplay.textContent = `Félicitations ! Vous avez rattrapé le Père Planchat en ${ (gameDuration - timer).toFixed(1)} secondes ! 🎉`;
+                resetButton.textContent = 'Rejouer';
+                resetButton.classList.remove('bg-gradient-to-r', 'from-purple-500', 'to-indigo-600');
+                resetButton.classList.add('bg-gradient-to-r', 'from-green-500', 'to-green-600');
+            } else {
+                messageDisplay.textContent = `Temps écoulé ! Vous n'avez pas rattrapé le Père Planchat. Partie perdue. 💀`;
+                resetButton.textContent = 'Recommencer';
+                resetButton.classList.remove('bg-gradient-to-r', 'from-purple-500', 'to-indigo-600');
+                resetButton.classList.add('bg-gradient-to-r', 'from-red-500', 'to-red-600');
+            }
+        }
+
+        // Fonction de compte à rebours
+        function startCountdown() {
+            countdownInterval = setInterval(() => {
+                timer -= 0.1; // Décrémente le temps toutes les 100ms
+                targetProgress += (targetSpeedFactor / 10); // La cible avance proportionnellement au temps
+
+                timerDisplay.textContent = `Temps: ${timer.toFixed(1)}s`;
+                updateProgressBars();
+
+                // Conditions de fin de partie
+                // 1. Le pèlerin gagne (atteint 100 pas ET est devant le Père Planchat)
+                if (stepsTaken >= totalSteps && stepsTaken > targetProgress) {
+                    endGame(true);
+                }
+                // 2. Le Père Planchat gagne (atteint 100 pas et le pèlerin n'a pas gagné)
+                else if (targetProgress >= totalSteps) {
+                    endGame(false); // Le pèlerin perd
+                }
+                // 3. Le temps est écoulé (et personne n'a gagné)
+                else if (timer <= 0) {
+                    timer = 0; // S'assurer que le temps ne soit pas négatif
+                    timerDisplay.textContent = `Temps: ${timer.toFixed(1)}s`;
+                    endGame(false); // Le pèlerin perd
+                }
+            }, 100); // Exécuté toutes les 100ms
+        }
+
+        // Fonction pour gérer les pressions de touche
+        function handleKeyPress(event) {
+            if (!gameActive) return;
+
+            const key = event.key.toLowerCase();
+            // Vérifie si la touche est 'o' ou 'p' et si elle est différente de la dernière touche pressée
+            if ((key === 'o' && lastKeyPressed !== 'o') || (key === 'p' && lastKeyPressed !== 'p')) {
+                stepsTaken++;
+                lastKeyPressed = key;
+                updateProgressBars();
+
+                // Vérifie la victoire immédiatement après un pas valide
+                if (stepsTaken >= totalSteps && stepsTaken > targetProgress) {
+                    endGame(true);
+                }
+            } else {
+                // Optionnel: feedback si mauvaise touche ou répétition
+                // console.log("Mauvaise touche ou répétition !");
+            }
+        }
+
+        // Fonction pour initialiser le jeu
+        function initializeGame() {
+            stepsTaken = 0;
+            timer = gameDuration;
+            targetProgress = totalSteps / 2; // La croix et la bannière commencent à 50% des pas
+            lastKeyPressed = '';
+            gameActive = false; // Le jeu commence en pause, prêt à être lancé par le bouton
+            clearInterval(countdownInterval); // Assure qu'aucun ancien intervalle ne tourne
+
+            messageDisplay.textContent = 'Essaie de rattraper la croix et la bannière du Père Planchat avant la prochaine pause, en courant ! Utilise les touches \'o\' (jambe gauche) et \'p\' (jambe droite) pour rattraper le chapitre.';
+            timerDisplay.textContent = `Temps: ${timer.toFixed(1)}s`;
+            resetButton.textContent = 'Commencer';
+            // Réinitialise les couleurs du bouton
+            resetButton.classList.remove('bg-gradient-to-r', 'from-green-500', 'to-green-600', 'from-red-500', 'to-red-600');
+            resetButton.classList.add('bg-gradient-to-r', 'from-purple-500', 'to-indigo-600');
+
+            updateProgressBars(); // Initialise les barres à zéro pour le joueur et la cible à 50%
+            document.removeEventListener('keydown', handleKeyPress); // Supprime l'écouteur si déjà présent
+        }
+
+        // Fonction pour démarrer le jeu
+        function startGame() {
+            if (!gameActive) {
+                gameActive = true;
+                messageDisplay.textContent = 'Allez, pèlerin !';
+                startCountdown();
+                document.addEventListener('keydown', handleKeyPress);
+                resetButton.textContent = 'Recommencer'; // Le bouton devient un bouton de reset une fois le jeu lancé
+                // Supprime les couleurs initiales, le style du bouton est géré par initializeGame pour le reset
+                resetButton.classList.remove('bg-gradient-to-r', 'from-purple-500', 'to-indigo-600');
+            } else {
+                // Si le bouton "Recommencer" est cliqué en cours de partie
+                initializeGame();
+            }
+        }
+
+        // Ajoute un écouteur d'événements pour le bouton
+        resetButton.addEventListener('click', startGame);
+
+        // Initialise le jeu au chargement de la page
+        window.onload = initializeGame;
+    </script>
+</body>
+</html>
 
