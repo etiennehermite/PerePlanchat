@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz sur l'Abbé Henri Planchat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f4f8, #d9e2ec); /* Doux dégradé de fond */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .quiz-container {
+            background-color: #ffffff;
+            border-radius: 1.5rem; /* Coins plus arrondis */
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            padding: 2.5rem; /* Plus de padding */
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem; /* Espacement entre les éléments */
+        }
+        .question-text {
+            font-size: 1.5rem; /* Texte de question plus grand */
+            font-weight: 600;
+            color: #2d3748; /* Couleur de texte sombre */
+            margin-bottom: 1.5rem;
+        }
+        .options-container button {
+            width: 100%;
+            padding: 1rem 1.25rem; /* Padding des boutons */
+            margin-bottom: 0.75rem; /* Espacement entre les options */
+            background-color: #edf2f7; /* Couleur de fond des options */
+            color: #4a5568; /* Couleur de texte des options */
+            border: 1px solid #cbd5e0; /* Bordure légère */
+            border-radius: 0.75rem; /* Coins arrondis pour les boutons */
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            font-size: 1.125rem; /* Taille de police des options */
+            font-weight: 500;
+        }
+        .options-container button:hover:not(.correct):not(.incorrect) {
+            background-color: #e2e8f0;
+            border-color: #a0aec0;
+        }
+        .options-container button.selected {
+            border-width: 2px;
+            border-color: #3182ce; /* Bleu plus prononcé pour la sélection */
+        }
+        .options-container button.correct {
+            background-color: #d1fae5; /* Vert clair */
+            border-color: #34d399; /* Vert plus vif */
+            color: #065f46; /* Vert foncé */
+            pointer-events: none;
+        }
+        .options-container button.incorrect {
+            background-color: #fee2e2; /* Rouge clair */
+            border-color: #ef4444; /* Rouge plus vif */
+            color: #991b1b; /* Rouge foncé */
+            pointer-events: none;
+        }
+        .controls button {
+            padding: 0.75rem 1.5rem;
+            background-color: #4299e1; /* Bleu primaire */
+            color: white;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre douce */
+        }
+        .controls button:hover {
+            background-color: #3182ce; /* Bleu plus foncé au survol */
+        }
+        .feedback-message {
+            font-size: 1.125rem;
+            font-weight: 500;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+        }
+        .feedback-correct {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .feedback-incorrect {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .final-score {
+            font-size: 1.875rem; /* Grande taille pour le score final */
+            font-weight: 700;
+            color: #2d3748;
+            margin-top: 2rem;
+        }
+        .final-message {
+            font-size: 1.25rem;
+            color: #4a5568;
+            margin-top: 0.5rem;
+        }
+        .start-screen, .end-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+        .start-screen h1, .end-screen h2 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+        .start-screen p {
+            font-size: 1.125rem;
+            color: #4a5568;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="quizApp" class="quiz-container">
+        <!-- Écran de démarrage -->
+        <div id="startScreen" class="start-screen">
+            <h1 class="text-3xl lg:text-4xl">Quiz sur l'Abbé Henri Planchat</h1>
+            <p>Testez vos connaissances sur la vie et les œuvres de l'Abbé Henri Planchat à travers ces 10 questions à choix multiples.</p>
+            <button id="startButton" class="mt-4 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition transform hover:scale-105">Commencer le Quiz</button>
+        </div>
+
+        <!-- Écran du quiz (caché initialement) -->
+        <div id="quizScreen" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-lg font-semibold text-gray-700">Question <span id="questionCounter">1</span> / 10</span>
+                <span class="text-lg font-semibold text-gray-700">Score: <span id="scoreDisplay">0</span></span>
+            </div>
+            <p id="questionText" class="question-text"></p>
+            <div id="optionsContainer" class="options-container">
+                <!-- Les options seront insérées ici par JavaScript -->
+            </div>
+            <div id="feedbackMessage" class="feedback-message hidden"></div>
+            <div class="controls flex justify-center gap-4 mt-6">
+                <button id="nextButton" class="hidden">Question Suivante</button>
+                <button id="checkButton">Vérifier la Réponse</button>
+            </div>
+        </div>
+
+        <!-- Écran de fin (caché initialement) -->
+        <div id="endScreen" class="hidden end-screen">
+            <h2 class="text-2xl lg:text-3xl">Quiz Terminé !</h2>
+            <p class="final-score">Votre score final : <span id="finalScore">0</span> / 10</p>
+            <p id="finalMessage" class="final-message"></p>
+            <button id="restartButton" class="mt-4 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl shadow-lg transition transform hover:scale-105">Recommencer</button>
+        </div>
+    </div>
+
+    <script>
+        // Définition des questions du quiz
+        const questions = [
+            {
+                question: "Quelle est la date de naissance de l'abbé Henri Planchat ?",
+                options: ["2 novembre 1821", "2 novembre 1823", "15 mars 1830", "26 mai 1871"],
+                correct: "2 novembre 1823"
+            },
+            {
+                question: "Dans quelle ville l'abbé Planchat est-il né ?",
+                options: ["Paris", "Chartres", "Bourbon-Vendée", "Lille"],
+                correct: "Bourbon-Vendée"
+            },
+            {
+                question: "Quelle action notable son grand-père a-t-il accomplie pendant la première révolution ?",
+                options: ["Il a fondé une œuvre de charité.", "Il a sauvé quatorze prêtres.", "Il a construit une église.", "Il a dirigé une révolte populaire."],
+                correct: "Il a sauvé quatorze prêtres."
+            },
+            {
+                question: "Jusqu'à quel âge l'abbé Planchat n'a-t-il eu d'autres maîtres que ses parents ?",
+                options: ["Jusqu'à l'âge de 7 ans", "Jusqu'à l'âge de 10 ans", "Jusqu'à l'âge de 14 ans", "Jusqu'à l'âge de 18 ans"],
+                correct: "Jusqu'à l'âge de 14 ans"
+            },
+            {
+                question: "Quelle société l'abbé Planchat a-t-il rejoint au collège de Vaugirard ?",
+                options: ["L'Académie française", "La Société de Saint-Vincent de Paul", "La Société des Missions Étrangères", "Un club de débat"],
+                correct: "La Société de Saint-Vincent de Paul"
+            },
+            {
+                question: "En quelle année l'abbé Planchat est-il entré au séminaire d'Issy ?",
+                options: ["En octobre 1844", "En octobre 1845", "En octobre 1847", "En décembre 1850"],
+                correct: "En octobre 1847"
+            },
+            {
+                question: "Quelle est la date de son ordination sacerdotale ?",
+                options: ["23 décembre 1849", "22 décembre 1850", "15 octobre 1849", "26 mai 1871"],
+                correct: "22 décembre 1850"
+            },
+            {
+                question: "Quand s'est-il établi à Sainte-Anne (Charonne) comme aumônier du patronage ?",
+                options: ["En 1853", "En 1861", "En 1863", "En 1870"],
+                correct: "En 1863"
+            },
+            {
+                question: "Combien d'aumônes l'abbé Planchat a-t-il récolté pendant le Siège de Paris ?",
+                options: ["Plus de 5 000 francs", "Plus de 10 000 francs", "Plus de 20 000 francs", "Plus de 50 000 francs"],
+                correct: "Plus de 20 000 francs"
+            },
+            {
+                question: "Dans quelle rue et à quelle date l'abbé Planchat a-t-il été assassiné ?",
+                options: ["Rue des Amandiers, 6 avril 1871", "Mazas, 22 mai 1871", "Rue Haxo, 26 mai 1871", "Faubourg Saint-Antoine, 30 novembre 1870"],
+                correct: "Rue Haxo, 26 mai 1871"
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let selectedOption = null;
+        let quizActive = false; // Pour empêcher les clics multiples ou triche
+
+        // Récupération des éléments du DOM
+        const startScreen = document.getElementById('startScreen');
+        const quizScreen = document.getElementById('quizScreen');
+        const endScreen = document.getElementById('endScreen');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        const questionText = document.getElementById('questionText');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const questionCounter = document.getElementById('questionCounter');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const nextButton = document.getElementById('nextButton');
+        const checkButton = document.getElementById('checkButton');
+        const feedbackMessage = document.getElementById('feedbackMessage');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const finalMessage = document.getElementById('finalMessage');
+
+        // Fonction pour démarrer le quiz
+        function startGame() {
+            startScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            currentQuestionIndex = 0;
+            score = 0;
+            scoreDisplay.textContent = score;
+            quizActive = true;
+            loadQuestion();
+        }
+
+        // Fonction pour charger une nouvelle question
+        function loadQuestion() {
+            if (currentQuestionIndex < questions.length) {
+                const q = questions[currentQuestionIndex];
+                questionText.textContent = q.question;
+                optionsContainer.innerHTML = ''; // Nettoyer les options précédentes
+                feedbackMessage.classList.add('hidden');
+                feedbackMessage.textContent = '';
+                nextButton.classList.add('hidden');
+                checkButton.classList.remove('hidden');
+                selectedOption = null;
+                questionCounter.textContent = currentQuestionIndex + 1;
+
+                q.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.classList.add('transition', 'duration-200', 'ease-in-out');
+                    button.addEventListener('click', () => selectOption(button, option));
+                    optionsContainer.appendChild(button);
+                });
+
+                // Activer les clics sur les options
+                optionsContainer.querySelectorAll('button').forEach(button => {
+                    button.style.pointerEvents = 'auto';
+                });
+            } else {
+                showEndScreen();
+            }
+        }
+
+        // Fonction pour sélectionner une option
+        function selectOption(button, option) {
+            if (!quizActive) return; // Empêcher la sélection si le quiz est inactif
+            optionsContainer.querySelectorAll('button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            button.classList.add('selected');
+            selectedOption = option;
+        }
+
+        // Fonction pour vérifier la réponse
+        function checkAnswer() {
+            if (!selectedOption) {
+                feedbackMessage.textContent = "Veuillez sélectionner une option.";
+                feedbackMessage.classList.remove('hidden', 'feedback-correct', 'feedback-incorrect');
+                feedbackMessage.classList.add('bg-yellow-100', 'text-yellow-800'); // Message d'avertissement
+                return;
+            }
+
+            quizActive = false; // Désactiver les interactions pendant la vérification
+            checkButton.classList.add('hidden');
+
+            const q = questions[currentQuestionIndex];
+            const allOptions = optionsContainer.querySelectorAll('button');
+
+            allOptions.forEach(button => {
+                // Désactiver les clics sur toutes les options après vérification
+                button.style.pointerEvents = 'none';
+
+                if (button.textContent === q.correct) {
+                    button.classList.add('correct');
+                } else if (button.textContent === selectedOption) {
+                    button.classList.add('incorrect');
+                }
+            });
+
+            if (selectedOption === q.correct) {
+                score++;
+                scoreDisplay.textContent = score;
+                feedbackMessage.textContent = "Bonne réponse !";
+                feedbackMessage.classList.remove('hidden', 'feedback-incorrect');
+                feedbackMessage.classList.add('feedback-correct');
+            } else {
+                feedbackMessage.textContent = `Mauvaise réponse. La bonne réponse était : ${q.correct}`;
+                feedbackMessage.classList.remove('hidden', 'feedback-correct');
+                feedbackMessage.classList.add('feedback-incorrect');
+            }
+
+            nextButton.classList.remove('hidden');
+            quizActive = true; // Réactiver pour le bouton suivant
+        }
+
+        // Fonction pour passer à la question suivante
+        function nextQuestion() {
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        // Fonction pour afficher l'écran de fin
+        function showEndScreen() {
+            quizScreen.classList.add('hidden');
+            endScreen.classList.remove('hidden');
+            finalScoreDisplay.textContent = score;
+
+            if (score === questions.length) {
+                finalMessage.textContent = "Félicitations ! Vous connaissez très bien l'Abbé Planchat !";
+            } else if (score >= questions.length / 2) {
+                finalMessage.textContent = "Bien joué ! Vous avez une bonne connaissance de l'Abbé Planchat.";
+            } else {
+                finalMessage.textContent = "Pas mal ! Continuez à apprendre sur l'Abbé Planchat.";
+            }
+        }
+
+        // Fonction pour redémarrer le quiz
+        function restartGame() {
+            endScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            currentQuestionIndex = 0;
+            score = 0;
+            selectedOption = null;
+            quizActive = false;
+        }
+
+        // Ajout des écouteurs d'événements
+        startButton.addEventListener('click', startGame);
+        checkButton.addEventListener('click', checkAnswer);
+        nextButton.addEventListener('click', nextQuestion);
+        restartButton.addEventListener('click', restartGame);
+
+        // Initialisation de l'application au chargement de la page
+        // window.onload = () => {
+        //     // Pas besoin de charger une question ici, l'écran de démarrage est visible par défaut
+        // };
+
+    </script>
+</body>
+</html>
