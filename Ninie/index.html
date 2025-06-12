@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ninie la voleuse de desserts</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Styles spécifiques pour le jeu */
+        #game-area {
+            /* Assure que les desserts sont contenus et défilement caché */
+            position: relative;
+            background-color: #f0f0f0;
+            border: 2px solid #a78bfa;
+            border-radius: 12px;
+            overflow: hidden; /* Important pour que les desserts ne dépassent pas */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 280px; /* Hauteur minimale pour les petits écrans */
+            max-height: 400px; /* Hauteur maximale pour les grands écrans */
+            height: 60vh; /* Hauteur relative à la fenêtre visible */
+        }
+
+        .dessert {
+            position: absolute;
+            cursor: pointer;
+            user-select: none; /* Empêche la sélection du texte */
+            font-size: 3rem; /* Taille de base pour les emojis */
+            transition: transform 0.1s ease-out; /* Animation légère au survol/clic */
+            line-height: 1; /* Assure que l'emoji est bien centré */
+        }
+        .dessert:hover {
+            transform: scale(1.1); /* Agrandit légèrement au survol */
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-100 to-indigo-200 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md lg:max-w-lg">
+        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-4 text-purple-700">Ninie la voleuse de desserts</h1>
+        <p class="text-center text-gray-600 mb-6 text-sm sm:text-base">Aide Ninie à voler à son frère Henri Planchat un maximum de desserts qui étaient initialement destinés aux pauvres</p>
+
+        <div class="flex justify-around items-center mb-6 text-lg sm:text-xl font-semibold">
+            <div class="flex flex-col items-center p-2 sm:p-3 bg-purple-50 rounded-lg shadow-inner flex-grow mx-2">
+                Score: <span id="score" class="text-purple-800 text-3xl sm:text-4xl font-bold mt-1">0</span>
+            </div>
+            <div class="flex flex-col items-center p-2 sm:p-3 bg-purple-50 rounded-lg shadow-inner flex-grow mx-2">
+                Temps: <span id="timer" class="text-purple-800 text-3xl sm:text-4xl font-bold mt-1">30</span>s
+            </div>
+        </div>
+
+        <div id="game-area" class="relative bg-gray-100 border-2 border-purple-300 rounded-xl w-full mb-6">
+            <p id="initial-message" class="text-center text-gray-500 font-medium text-lg p-4">Cliquez sur "Commencer" pour jouer !</p>
+            <!-- Les desserts apparaîtront ici -->
+        </div>
+
+        <div class="flex justify-center">
+            <button id="start-button" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 sm:px-8 rounded-full shadow-lg transform hover:scale-105 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 text-base sm:text-lg">
+                Commencer le jeu
+            </button>
+        </div>
+
+        <div id="message-box" class="text-center mt-6 text-xl sm:text-2xl font-semibold text-red-600 hidden p-2">
+            <!-- Le message de fin de jeu apparaîtra ici -->
+        </div>
+    </div>
+
+    <script>
+        // Variables du jeu
+        let score = 0;
+        let timeLeft = 30;
+        let gameRunning = false;
+        let timerInterval;
+        let dessertSpawnInterval;
+        // Liste des emojis de desserts à utiliser
+        const dessertEmojis = ['🍰', '🧁', '🍩', '�', '🍫', '🍦', '🍮', '🍬'];
+
+        // Références aux éléments du DOM
+        const gameArea = document.getElementById('game-area');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const startButton = document.getElementById('start-button');
+        const messageBox = document.getElementById('message-box');
+        const initialMessage = document.getElementById('initial-message');
+
+        // Fonction pour démarrer le jeu
+        function startGame() {
+            if (gameRunning) return; // Empêche de démarrer le jeu si une partie est déjà en cours
+
+            score = 0;
+            timeLeft = 30;
+            gameRunning = true;
+
+            // Met à jour l'affichage initial
+            scoreDisplay.textContent = score;
+            timerDisplay.textContent = timeLeft;
+            messageBox.classList.add('hidden'); // Cache le message de fin de jeu/initial
+            initialMessage.classList.add('hidden'); // Cache le message "Cliquez pour jouer"
+
+            // Supprime tous les desserts existants de la zone de jeu
+            document.querySelectorAll('.dessert').forEach(dessert => dessert.remove());
+
+            // Démarrer le compte à rebours
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame(); // Arrête le jeu si le temps est écoulé
+                }
+            }, 1000); // Chaque seconde
+
+            // Commencer à faire apparaître les desserts
+            dessertSpawnInterval = setInterval(spawnDessert, 700); // Un nouveau dessert toutes les 0.7 secondes
+
+            // Désactive le bouton "Commencer" pendant le jeu
+            startButton.textContent = 'Jeu en cours...';
+            startButton.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+            startButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+            startButton.disabled = true;
+        }
+
+        // Fonction pour arrêter le jeu
+        function endGame() {
+            gameRunning = false;
+            clearInterval(timerInterval); // Arrête le compte à rebours
+            clearInterval(dessertSpawnInterval); // Arrête l'apparition des desserts
+
+            // Supprime tous les desserts restants de la zone de jeu
+            document.querySelectorAll('.dessert').forEach(dessert => dessert.remove());
+
+            // Affiche le message de fin de partie avec le score
+            messageBox.textContent = `Partie terminée ! Votre score : ${score}`;
+            messageBox.classList.remove('hidden');
+
+            // Réactive le bouton "Commencer" pour rejouer
+            startButton.textContent = 'Rejouer';
+            startButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            startButton.classList.add('bg-purple-600', 'hover:bg-purple-700');
+            startButton.disabled = false;
+        }
+
+        // Fonction pour faire apparaître un nouveau dessert
+        function spawnDessert() {
+            if (!gameRunning) return; // Ne pas faire apparaître si le jeu n'est pas en cours
+
+            const dessert = document.createElement('div');
+            // Choisit un emoji de dessert aléatoirement
+            dessert.textContent = dessertEmojis[Math.floor(Math.random() * dessertEmojis.length)];
+            // Applique les classes Tailwind pour le style et l'interactivité
+            dessert.classList.add('dessert');
+
+            // Calcul de la position aléatoire
+            const gameAreaRect = gameArea.getBoundingClientRect();
+            // Taille approximative d'un dessert (en pixels) pour éviter qu'il ne déborde
+            const dessertSize = 65; // Ajustez cette valeur si les emojis semblent couper
+
+            // Génère des positions X et Y aléatoires dans les limites de la zone de jeu
+            let posX = Math.random() * (gameAreaRect.width - dessertSize);
+            let posY = Math.random() * (gameAreaRect.height - dessertSize);
+
+            // S'assure que la position est bien à l'intérieur de la zone de jeu (pas de débordement)
+            posX = Math.max(0, Math.min(posX, gameAreaRect.width - dessertSize));
+            posY = Math.max(0, Math.min(posY, gameAreaRect.height - dessertSize));
+
+            dessert.style.left = `${posX}px`;
+            dessert.style.top = `${posY}px`;
+
+            // Ajoute un écouteur d'événement pour le clic sur le dessert
+            dessert.addEventListener('click', handleDessertClick);
+            gameArea.appendChild(dessert);
+
+            // Le dessert disparaît après un certain temps s'il n'est pas cliqué
+            // Cela évite que la zone de jeu ne soit surchargée
+            setTimeout(() => {
+                if (dessert.parentNode === gameArea) { // Vérifie si le dessert est toujours dans la zone de jeu
+                    dessert.remove();
+                }
+            }, 3500); // Le dessert reste 3.5 secondes avant de disparaître
+        }
+
+        // Fonction pour gérer le clic sur un dessert
+        function handleDessertClick(event) {
+            if (!gameRunning) return; // Ignore le clic si le jeu n'est pas en cours
+
+            score++; // Incrémente le score
+            scoreDisplay.textContent = score; // Met à jour l'affichage du score
+            event.target.remove(); // Supprime le dessert cliqué de la zone de jeu
+        }
+
+        // Ajoute l'écouteur d'événement pour le bouton "Commencer"
+        startButton.addEventListener('click', startGame);
+
+        // Initialisation de l'affichage au chargement de la page
+        window.onload = function() {
+            // S'assure que le message initial est visible et la zone de jeu est propre
+            initialMessage.classList.remove('hidden');
+            gameArea.innerHTML = '<p id="initial-message" class="text-center text-gray-500 font-medium text-lg p-4">Cliquez sur "Commencer" pour jouer !</p>';
+        };
+    </script>
+</body>
+</html>
+�
